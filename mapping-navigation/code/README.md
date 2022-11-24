@@ -1,1 +1,7 @@
-#mapping-navigation
+# mapping-navigation
+
+# Team Members
+- LEONG WENG YAN IVAN (1900688)
+- CHEW CHYOU KEAT LIONEL (2101371)
+- LAU HUI QI (2102823)
+- LAU JUN XIANG (2100582)
