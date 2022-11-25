@@ -9,7 +9,6 @@
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
 
-int counter = 0;
 char temp[80];
 char ch = 'c', coordX = 'c', coordY = 'y';
 
@@ -101,10 +100,6 @@ int main() {
     int heightofhump2 = 30;
     int x = 0;
     int y = 5;
-    int counter = 0;
-    double executionTime = 0;
-
-    clock_t startTime = clock();
 
     while(1) {
         sendWheelSpeedL(wheelspeedl);
@@ -138,14 +133,7 @@ int main() {
         //     printf("Coord from flask: %c,%c", coordX, coordY);
         // }
 
-        // send data every 1000ms, ensure delay here is same as m5stick delay
+        // send data every 1000ms
         sleep_ms(1000);
-
-        counter++;
-        if (counter == 50) {
-            clock_t endTime = clock();
-            executionTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
-            printf("Execution time:%f sec\n", executionTime);
-        }
     }
 }
