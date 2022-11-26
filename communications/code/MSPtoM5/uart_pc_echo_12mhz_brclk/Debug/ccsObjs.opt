@@ -1,0 +1,1 @@
+"./startup_msp432p401r_ccs.obj" "./system_msp432p401r.obj" "./uart_pc_echo_12mhz_brclk.obj" "C:/msp432_driverlib_3_21_00_05/driverlib/MSP432P4xx/ccs/msp432p4xx_driverlib.lib" "../uart_pc_echo_12mhz_brclk_ccs.cmd" -llibc.a 

@@ -1,0 +1,343 @@
+<link rel="stylesheet" href="map.css">
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+<script type="text/javascript" charset="utf-8">
+  
+  /* ---------------------- RECEVING DATA FROM PICO AND M5 START ---------------------- */
+
+  $(document).ready(function() {
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    // listen for mqtt_message events using socket, when a new message is received, display the data corresponding to the topic
+    socket.on('mqtt_message', function(data) {
+      var payload;
+      // data['topic'] to get the mqtt topic
+      // data['payload'] to get the message in the mqtt topic
+      var topic = data['topic']
+
+      if (topic == 'pico/wheelvelocityl') {
+        payload  = document.getElementById('subscribe_wheelvelocityl');
+        payload.innerHTML = data['payload'] + 'cm/s';
+      }
+
+      if (topic == 'pico/wheelvelocityr') {
+        payload  = document.getElementById('subscribe_wheelvelocityr');
+        payload.innerHTML = data['payload'] + 'cm/s';
+      }
+
+      if (topic == 'pico/barcode') {
+        payload  = document.getElementById('subscribe_barcode');
+        payload.innerHTML = data['payload'];
+      }
+
+      if (topic == 'pico/distancefromsensor') {
+        payload  = document.getElementById('subscribe_distancefromsensor');
+        payload.innerHTML = data['payload'];
+      }
+
+      if (topic == 'pico/heightofhump') {
+        payload  = document.getElementById('subscribe_heightofhump');
+        payload.innerHTML = data['payload'];
+      }
+
+      if (topic == 'pico/mapcoordinates') {
+        payload  = document.getElementById('subscribe_mapcoordinates');
+        payload.innerHTML = data['payload'];
+      }
+
+      if (topic == 'pico/mapcoordinates') {
+        updateMap(data['payload']);
+      }
+
+      if (topic == 'pico/barcodecoordinates') {
+        addBarcode(data['payload']);
+      }
+
+      if (topic == 'pico/humpcoordinates') {
+        addHump(data['payload']);
+      }
+    })
+  });
+
+/* ---------------------- RECEVING DATA FROM PICO AND M5 END ---------------------- */
+
+function generateTable() {
+  // creates a <table> element and a <tbody> element
+  const tbl = document.createElement("table");
+  const tblBody = document.createElement("tbody");
+
+  // creating all cells
+  for (let i = -5; i < 6; i++) {
+    // creates a table row
+    const row = document.createElement("tr");
+
+    for (let j = -5; j < 6; j++) {
+      // Create a <td> element and a text node, make the text
+      // node the contents of the <td>, and put the <td> at
+      // the end of the table row
+      const cell = document.createElement("td");
+      const cellText = document.createTextNode(`row ${i}, col ${j}`);
+
+      cell.setAttribute("class",i+'-'+j);
+      cell.appendChild(cellText);
+
+      row.appendChild(cell);
+    }
+
+    // add the row to the end of the table body
+    tblBody.appendChild(row);
+  }
+
+  // put the <tbody> in the <table>
+  tbl.appendChild(tblBody);
+  // appends <table> into <body>
+  document.getElementById("table").appendChild(tbl);
+  // sets the border attribute of tbl to '2'
+  tbl.setAttribute("border", "2");
+   document.getElementById("myTable").rows[0].innerHTML="your image";
+}
+
+function updateMap(newCoord){
+  var coord = newCoord.split(",");
+  $(".car").addClass("path");
+  $(".car").removeClass("car");
+  destId = "c"+coord[1]+"_"+coord[0];
+  $("#"+destId).addClass("car");
+  if(coord[2] == "1"){
+    $("#"+destId).addClass("north");
+  }
+  if(coord[3] == "1"){
+    $("#"+destId).addClass("south");
+  }
+  if(coord[4] == "1"){
+    $("#"+destId).addClass("east");
+  }
+  if(coord[5] == "1"){
+    $("#"+destId).addClass("west");
+  }
+}
+
+function addBarcode(newCoord){
+  var coord = newCoord.split(",");
+  destId = "c"+coord[1]+"_"+coord[0];
+  $("#"+destId).removeClass("path");
+  $("#"+destId).addClass("barcode");
+ }
+
+ function addHump(newCoord){
+  var coord = newCoord.split(",");
+  destId = "c"+coord[1]+"_"+coord[0];
+  $("#"+destId).removeClass("path");
+  $("#"+destId).addClass("hump");
+ }
+
+$(document).ready(function(){
+  $("#barcode").click(function(){
+        $(".car").removeClass("path");
+        $(".car").addClass("barcode");
+        });
+  });
+
+$(document).ready(function(){
+  $("#hump").click(function(){
+        $(".car").removeClass("path");
+        $(".car").addClass("hump");
+
+  });
+
+});
+
+$(document).ready(function(){
+  $("#east").click(function(){
+      //remove east border
+        $(".car").addClass("east");
+
+        var id = [];
+      //get id of the class that contains car
+            $(".car").each(function(){
+                    id.push($(this).attr("id"));
+            });
+        //find new coord
+        let result = id[0].slice(1);
+        var coord = result.split("_");
+        col = parseInt(coord[1]);
+        col+=1;
+        newId = "c"+coord[0]+"_"+col;
+        //remove car class
+        $("#"+id[0]).removeClass("car");
+        $("#"+id[0]).addClass("path");
+        $("#"+newId).removeClass("path");
+        //move car east
+
+        $("#"+newId).addClass("car");
+  });
+
+});
+
+
+$(document).ready(function(){
+  $("#west").click(function(){
+      //remove west border
+      $(".car").removeClass("path");
+        $(".car").addClass("west");
+        var id = [];
+      //get id of the class that contains car
+            $(".car").each(function(){
+                    id.push($(this).attr("id"));
+            });
+        //find new coord
+        let result = id[0].slice(1);
+        var coord = result.split("_");
+        col = parseInt(coord[1]);
+        col-=1;
+        newId = "c"+coord[0]+"_"+col;
+        //remove car class
+        $("#"+id[0]).removeClass("car");
+
+        $("#"+id[0]).addClass("path");
+        $("#"+newId).removeClass("path");
+        //move car west
+
+        $("#"+newId).addClass("car");
+  });
+});
+
+$(document).ready(function(){
+  $("#north").click(function(){
+      //remove top border
+      $(".car").removeClass("path");
+        $(".car").addClass("north");
+        var id = [];
+      //get id of the class that contains car
+            $(".car").each(function(){
+                    id.push($(this).attr("id"));
+            });
+        //find new coord
+        let result = id[0].slice(1);
+        var coord = result.split("_");
+        row = parseInt(coord[0]);
+        row+=1;
+        newId = "c"+row+"_"+coord[1];
+        //remove car class
+        $("#"+id[0]).removeClass("car");
+
+        $("#"+id[0]).addClass("path");
+        $("#"+newId).removeClass("path");
+        //move car north
+        $("#"+newId).addClass("car");
+  });
+});
+
+$(document).ready(function(){
+  $("#south").click(function(){
+      //remove south border
+      $(".car").removeClass("path");
+        $(".car").addClass("south");
+        var id = [];
+      //get id of the class that contains car
+            $(".car").each(function(){
+                    id.push($(this).attr("id"));
+            });
+        //find new coord
+        let result = id[0].slice(1);
+        var coord = result.split("_");
+        row = parseInt(coord[0]);
+        row-=1;
+        newId = "c"+row+"_"+coord[1];
+        //remove car class
+        $("#"+id[0]).removeClass("car");
+
+        $("#"+id[0]).addClass("path");
+        $("#"+newId).removeClass("path");
+        //move car south
+
+        $("#"+newId).addClass("car");
+  });
+});
+
+</script>
+
+{% extends '_layout.html' %}
+{% block body %}
+
+<!---------------------- RECEIVING DATA FROM PICO AND M5 START ---------------------->
+<div class="container"> 
+  <div class="row">
+    <div class="col-3">
+      Left Wheel Velocity: <div id="subscribe_wheelvelocityl"></div>
+      <br/>
+      Right Wheel Velocity: <div id="subscribe_wheelvelocityr"></div>
+      <br/>
+      Barcode Data: <div id="subscribe_barcode"></div>
+      <br/>
+      Distance from sensor: <div id="subscribe_distancefromsensor"></div>
+      <br/>
+      Height of hump: <div id="subscribe_heightofhump"></div>
+      <br/>
+      Map Coordinates: <div id="subscribe_mapcoordinates"></div>
+    </div>
+
+    <div class="col-9">
+      <!-- <form name = "coord" action="/publish" method="post">
+        <label for="coord">Enter coordinates:</label>
+        <input type="text" id="coord" name="coord">
+        <button type="submit">Submit</button>
+        <script type="text/javascript">
+          // publishing form every 5 seconds (prevent uart1.write in M5stick to be blocking reading of uart)
+          window.onload=function(){ 
+          var counter = 5;
+          var interval = setInterval(function() {
+              counter--;
+              $("#seconds").text(counter);
+              if (counter == 0) {
+                  redirect();
+                  clearInterval(interval);
+              }
+          }, 1000);
+          };
+
+        function redirect() {
+            document.coord.submit();
+        }
+
+      </script>
+      </form> -->
+    </div>
+<!---------------------- RECEIVING DATA FROM PICO AND M5 END ---------------------->
+
+    
+<div class="container">
+  <!-- <div> 
+    <label for="name">X,Y,N,S,E,W</label>
+    <input type="text" id="newCoord" name="newCoord" placeholder="X,Y,N,S,E,W" />
+    <input type = "button" onclick="updateMap()" value = "addNewCoord"/> 
+  </div> -->
+  <!-- <div>
+    <input type="button" value="Generate a table" onclick="generateTable()" />
+    <label id="coormap" name="newCoord" text="{{coormap}}">{{coormap}}</label>
+  </div>     -->
+  <div id = "table">
+  </div>
+  <div class="main" >
+    <div class="inner" style="font-size: 25px;" >
+      <script>
+        document.write(" <table border=2px solid black>")
+          for (rows = 6; rows >= -6; rows--) {
+            document.write(" <tr> ")
+            for (col = -6; col <= 6; col++) {
+              var rowcol = 'c'+rows+'_'+col;
+              document.write(" <td style= padding:10px id =" +rowcol+"> X:" + col + " Y:" + rows + " </td> ")
+            }
+            document.write(" </tr> ")
+          }
+          document.write(" </table> ")
+          var start = document.getElementById("c0_0");
+          start.className = "car"
+      </script>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

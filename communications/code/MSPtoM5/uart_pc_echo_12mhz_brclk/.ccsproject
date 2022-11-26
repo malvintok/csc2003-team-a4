@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?ccsproject version="1.0"?>
+<projectOptions>
+	<ccsVersion value="9.3.0"/>
+	<deviceVariant value="MSP432P401R"/>
+	<deviceFamily value="MSP432"/>
+	<deviceEndianness value="little"/>
+	<codegenToolVersion value="18.12.4.LTS"/>
+	<isElfFormat value="true"/>
+	<connection value="common/targetdb/connections/TIXDS110_Connection.xml"/>
+	<linkerCommandFile value="uart_pc_echo_12mhz_brclk_ccs.cmd"/>
+	<rts value="libc.a"/>
+	<createSlaveProjects value=""/>
+	<ignoreDefaultDeviceSettings value="true"/>
+	<templateProperties value="id=uart_pc_echo_12mhz_brclk.projectspec.uart_pc_echo_12mhz_brclk"/>
+	<origin value="C:\msp432_driverlib_3_21_00_05\examples\MSP432P4xx\uart\uart_pc_echo_12mhz_brclk\ccs\uart_pc_echo_12mhz_brclk.projectspec"/>
+	<filesToOpen value="uart_pc_echo_12mhz_brclk.c"/>
+</projectOptions>
