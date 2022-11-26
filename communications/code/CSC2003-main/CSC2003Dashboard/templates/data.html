@@ -46,13 +46,24 @@
         payload  = document.getElementById('subscribe_mapcoordinates');
         payload.innerHTML = data['payload'];
       }
+
+      if (topic == 'pico/mapcoordinates') {
+        updateMap(data['payload']);
+      }
+
+      if (topic == 'pico/barcodecoordinates') {
+        addBarcode(data['payload']);
+      }
+
+      if (topic == 'pico/humpcoordinates') {
+        addHump(data['payload']);
+      }
     })
   });
 
 /* ---------------------- RECEVING DATA FROM PICO AND M5 END ---------------------- */
 
-  
-  function generateTable() {
+function generateTable() {
   // creates a <table> element and a <tbody> element
   const tbl = document.createElement("table");
   const tblBody = document.createElement("tbody");
@@ -88,13 +99,45 @@
    document.getElementById("myTable").rows[0].innerHTML="your image";
 }
 
+function updateMap(newCoord){
+  var coord = newCoord.split(",");
+  $(".car").addClass("path");
+  $(".car").removeClass("car");
+  destId = "c"+coord[1]+"_"+coord[0];
+  $("#"+destId).addClass("car");
+  if(coord[2] == "1"){
+    $("#"+destId).addClass("north");
+  }
+  if(coord[3] == "1"){
+    $("#"+destId).addClass("south");
+  }
+  if(coord[4] == "1"){
+    $("#"+destId).addClass("east");
+  }
+  if(coord[5] == "1"){
+    $("#"+destId).addClass("west");
+  }
+}
+
+function addBarcode(newCoord){
+  var coord = newCoord.split(",");
+  destId = "c"+coord[1]+"_"+coord[0];
+  $("#"+destId).removeClass("path");
+  $("#"+destId).addClass("barcode");
+ }
+
+ function addHump(newCoord){
+  var coord = newCoord.split(",");
+  destId = "c"+coord[1]+"_"+coord[0];
+  $("#"+destId).removeClass("path");
+  $("#"+destId).addClass("hump");
+ }
+
 $(document).ready(function(){
   $("#barcode").click(function(){
         $(".car").removeClass("path");
         $(".car").addClass("barcode");
-
         });
-
   });
 
 $(document).ready(function(){
@@ -159,7 +202,6 @@ $(document).ready(function(){
 
         $("#"+newId).addClass("car");
   });
-
 });
 
 $(document).ready(function(){
@@ -214,6 +256,7 @@ $(document).ready(function(){
         $("#"+newId).addClass("car");
   });
 });
+
 </script>
 
 {% extends '_layout.html' %}
@@ -265,38 +308,36 @@ $(document).ready(function(){
 <!---------------------- RECEIVING DATA FROM PICO AND M5 END ---------------------->
 
     
-    <!-- <input type="button" value="Generate a table" onclick="generateTable()" />
-    <div id = "table">
-        <p>test</p>
+<div class="container">
+  <!-- <div> 
+    <label for="name">X,Y,N,S,E,W</label>
+    <input type="text" id="newCoord" name="newCoord" placeholder="X,Y,N,S,E,W" />
+    <input type = "button" onclick="updateMap()" value = "addNewCoord"/> 
+  </div> -->
+  <!-- <div>
+    <input type="button" value="Generate a table" onclick="generateTable()" />
+    <label id="coormap" name="newCoord" text="{{coormap}}">{{coormap}}</label>
+  </div>     -->
+  <div id = "table">
+  </div>
+  <div class="main" >
+    <div class="inner" style="font-size: 25px;" >
+      <script>
+        document.write(" <table border=2px solid black>")
+          for (rows = 6; rows >= -6; rows--) {
+            document.write(" <tr> ")
+            for (col = -6; col <= 6; col++) {
+              var rowcol = 'c'+rows+'_'+col;
+              document.write(" <td style= padding:10px id =" +rowcol+"> X:" + col + " Y:" + rows + " </td> ")
+            }
+            document.write(" </tr> ")
+          }
+          document.write(" </table> ")
+          var start = document.getElementById("c0_0");
+          start.className = "car"
+      </script>
     </div>
-    <div class="main" >
-            <div class="inner" style="font-size: 25px;" >
-                <script>
-                    document.write(" <table border=2px solid black>")
-                    for (rows = 6; rows >= -6; rows--) {
-                        document.write(" <tr> ")
-                        for (col = -6; col <= 6; col++) {
-                            var rowcol = 'c'+rows+'_'+col;
-                            document.write(" <td style= padding:10px id =" +rowcol+"> Row" + rows + " <br> Col" + col + " </td> ")
-                        }
-                        document.write(" </tr> ")
-                    }
-                    document.write(" </table> ")
-                    var start = document.getElementById("c0_0");
-                    start.className = "car"
-                </script>
-                <input type="button" value="North" id = "north"/>
-                <input type="button" value="South" id = "south" />
-                <input type="button" value="East"  id = "east"/>
-                <input type="button" value="West" id = "west" />
-                <input type="button" value="Barcode" id = "barcode" class = "barcode"/>
-                <input type="button" value="Hump" id = "hump" class = "hump"/>
-            </div>
-      </div>
-    
-    
-      </div>
-    
-    </div> -->
+  </div>
+</div>
 {% endblock %}
 

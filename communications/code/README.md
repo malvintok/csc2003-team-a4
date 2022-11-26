@@ -33,6 +33,6 @@
 1. Prerequisites: Install the required libraries (flask, flask_mqtt, socket.io)
 2. In CSC2003-main/CSC2003Dashboard, run main.py.
 2. Head to 127.0.0.1:5000.
-3. Select RoboCar to view data, and Map to view the plotting of map.
+3. Select RoboCar to view the data and map.
 
 

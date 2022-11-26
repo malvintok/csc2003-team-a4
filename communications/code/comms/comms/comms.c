@@ -12,13 +12,9 @@
 char temp[80];
 char ch = 'c', coordX = 'c', coordY = 'y';
 
-clock_t clock()
-{
-    return (clock_t) time_us_64() / 10000;
-}
-
-// sending data over to M5Stick using UART
+// ,ethods to send data over to M5Stick using UART
 // each data will have an ID prepended to it
+// # will be appended to each data to act as a delimiter
 // left wheel speed ID = 1
 void sendWheelSpeedL(int wheelspeed) {
     sprintf(temp, "1%d#",wheelspeed);
@@ -83,25 +79,22 @@ char getCoord() {
 
 int main() {
     stdio_init_all();
+
     // Set up our UART with the required speed.
     uart_init(UART_ID, BAUD_RATE);
 
     // Set the TX and RX pins by using the function select on the GPIO
-    // Set datasheet for more information on function select
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-
-    // Use some the various UART functions to send out data. In a default system, printf will also output via the default UART.
 
     char * barcode2 = "TEST";
     int wheelspeedl = 20;
     int wheelspeedr = 20;
     int distancefromsensor2 = 10;
     int heightofhump2 = 30;
-    int x = 0;
-    int y = 5;
 
     while(1) {
+        // sending dummy data
         sendWheelSpeedL(wheelspeedl);
         wheelspeedl++;
 
@@ -112,13 +105,28 @@ int main() {
         sendDist(distancefromsensor2);
         sendHeight(heightofhump2);
 
-        // test values
-        sendCoord(x,y,1,0,0,0);
-        sendCoord(x,6,0,1,0,0);
-        sendCoord(2,y,0,0,1,0);
+        sendCoord(0,1,0,0,0,0);
+        sendCoord(0,2,0,0,0,0);
+        sendCoord(0,3,0,0,0,0);
+        sendCoord(-1,3,0,0,0,0);
+        sendCoord(-2,3,0,0,0,0);
+        sendCoord(-3,3,0,0,0,0);
+        
+        sendHumpCoord(-3,2);
 
-        sendHumpCoord(3,3);
-        sendBarcodeCoord(1,1);
+        sendCoord(-3,1,0,0,0,0);
+        sendCoord(-3,0,0,0,0,0);
+        
+        sendBarcodeCoord(-3,-1);
+
+        sendCoord(-3,-2,0,0,0,0);
+        sendCoord(-2,-2,0,0,0,0);
+        sendCoord(-2,-3,0,0,0,0);
+        sendCoord(-1,-3,0,0,0,0);
+        sendCoord(0,-3,0,0,0,0);
+        sendCoord(1,-3,0,0,0,0);
+        sendCoord(1,-2,0,0,0,0);
+        sendCoord(2,-2,0,0,0,0);
 
         // reading from m5
         // ch = getCoord();

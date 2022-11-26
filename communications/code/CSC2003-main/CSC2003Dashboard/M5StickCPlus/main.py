@@ -53,6 +53,7 @@ data = ''
 queue = []
 
 while True:
+  # check for any uart data received
   if(uart1.any()):
     
     lcd.clear()
@@ -83,7 +84,7 @@ while True:
       if(i[0:1] == '8'):    
         m5mqtt.publish(str('pico/wheelvelocityr'), str(i[1:]), 0)
   
-    wait(1)
+    wait_ms(500)
 
   else:
     lcd.clear()
