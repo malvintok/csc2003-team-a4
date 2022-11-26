@@ -16,7 +16,7 @@ void InitAlgorithim(Database *d)
 }
 /**
  * @brief Function will takes in start grid and end grid: returns an array
- * of grid address that is the shortest path
+ * of grid address that is the first path found
  * @param start : Start grid's address
  * @param end : End grid's address
  * @param come_from: grid the prev recursive call was called from (can put as start grid address for first call)
@@ -24,15 +24,11 @@ void InitAlgorithim(Database *d)
  */
 void recurToDest(Grid *start, Grid *end, Grid *come_from)
 {
-    // init current grid as the (address of) start grid
-    //Grid *curr = start;
-    // 1st interation: init prev grid as the start address, nth interation: prev = (address of)previous current grid
-    //Grid *prev = come_from;
     // If current != (address of) end grid.
     if (start != end)
     {
         /*check which is the non-null neighbour grids, Max amount of linked grid is 4 (since NSEW)*/
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < NSEW; i++)
         {
             /*
              *If either N,S,E or W is has a linked grid
@@ -41,14 +37,17 @@ void recurToDest(Grid *start, Grid *end, Grid *come_from)
              */
             if (start->neighbouringGrids[i] != NULL && start->neighbouringGrids[i] != come_from)
             {
+                // if grid has been visited before or it is the destination
                 if (start->neighbouringGrids[i]->visited == true || start->neighbouringGrids[i] == end)
                 {
-                    // append this grid to the path array
+                    // append this grid to the path array, if unable to append exit from this cycle
                     if(!append2Array(database->Path, start))
                         return;
 
                     // call recursive function with start as the new curr
                     recurToDest(start->neighbouringGrids[i], end, start);
+
+                    // if path found exit recursion
                     if(database->isPathfinding)
                         return;
                     else
@@ -58,7 +57,7 @@ void recurToDest(Grid *start, Grid *end, Grid *come_from)
         }
         return;
     }
-    else
+    else // if path found
     {
         // append the ending grid to the path array
         append2Array(database->Path, end);
@@ -79,6 +78,7 @@ bool append2Array(Grid *array[], Grid *grid)
     int counter = 0;
     while (array[counter] != NULL)
     {
+        // if grid is already in array, return false
         if(array[counter] == grid)
             return false;
         counter++;
@@ -87,6 +87,11 @@ bool append2Array(Grid *array[], Grid *grid)
     return true;
 }
 
+/**
+ * @brief Function is used to remove grid address from the top of array of grid address
+ *
+ * @param array: Array to pop from
+ */
 void popArray(Grid *array[])
 {
     int counter = 0;

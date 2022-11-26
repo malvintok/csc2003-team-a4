@@ -12,25 +12,25 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
+#include "pico/stdlib.h"
+
 #include "database.h"
-#include "ultrasonic.c"
 
-// Ultrasonic pins
-#define U_TRIGGER_PIN 2
-#define U_ECHO_PIN 3
-
+// Finite state machine states for maping
 typedef enum FINITE_STATE
 {
-    FS_CHECKING_GRID = 0,
-    FS_GOING_STRAIGHT,
-    FS_TURN_RIGHT,
-    FS_TURN_LEFT,
-    FS_TURN_AROUND,
-    FS_PATHFINDING,
-    FS_FINISH_MAPPING
+    FS_CHECKING_GRID = 0, // performs checks on current grid and decides next course of action
+    FS_GOING_STRAIGHT, // when the car is moving straight
+    FS_TURN_RIGHT, // when the car is turing right
+    FS_TURN_LEFT, // when the car is turing left
+    FS_TURN_AROUND, // when the car is doing a 180 degree turn
+    FS_PATHFINDING, // state where the car navigates to a selected grid
+    FS_FINISH_MAPPING // ending state when the entire map is maped out
 
 } FINITE_STATE;
 
+// corosponding string name for the DIRECTION enum found in database
 const char *direction_str[NSEW] = {"North", "East", "South", "West"};
 
 // Function Prototypes
@@ -38,7 +38,7 @@ const char *direction_str[NSEW] = {"North", "East", "South", "West"};
 void PicoStartUpTest();
 void CheckPosibleMoves(int L, int R, int F, Database *database);
 void LinkCurrentGrid(int facingOffset, Database *database);
-Grid *GetGrid(int nextX, int nextY, Database *database);
+Grid *GetGrid(int x, int y, Database *database);
 Grid *GetNextAvailableGrid(int nextX, int nextY, Database *database);
 void SetCoordinate(int *x, int *y, DIRECTION facing);
 int FindTurningIndex(Grid *grid, Database *database);
@@ -56,10 +56,8 @@ int main()
     // Init all standard I/O
     stdio_init_all();
 
+    // bink led lights to signify start of excecution
     PicoStartUpTest();
-
-    // ultrasonic init
-    init_pins(U_TRIGGER_PIN, U_ECHO_PIN);
 
     // FSM current state
     FINITE_STATE curState = FS_CHECKING_GRID;
@@ -70,6 +68,7 @@ int main()
     Database database;
     memset(&database, 0, sizeof(Database));
 
+    // pass database address to path finding algo
     InitAlgorithim(&database);
 
     // set the current grid to slot 0 of the grid list
@@ -85,7 +84,6 @@ int main()
         switch (curState)
         {
 
-        // Moving forward or just moving around?
         case FS_GOING_STRAIGHT:
         {
             printf("\n<GOING_STRAIGHT State>\n");
@@ -179,8 +177,7 @@ int main()
 
             // Get all 3 Ultrasonic's Current Distance (L,R,F)
 
-            // Simulate Ultrasonic Sensors
-
+            // Simulate Ultrasonic Sensors by geting input with uart
             unsigned char userInputF = 0, userInputL = 0, userInputR = 0;
             do
             {
@@ -202,38 +199,46 @@ int main()
                 userInputR = mygetchar();
                 printf("%c\n", userInputR);
             } while (userInputR != 'y' && userInputR != 'n');
-
+            
+            // based on ultrasonic input, update the current grid's details and other maping infomation
             CheckPosibleMoves(
                 userInputF == 'y' ? 200 : 0,
                 userInputL == 'y' ? 200 : 0,
                 userInputR == 'y' ? 200 : 0,
                 &database);
-
-
+            
+            // after updating data above
             // check which direction is possible. Check Right, Left then Front.
-            // check current grid's right side grid (isfacing+1) is not NULL (has a grid address) and that right side grid is not visited
+            // check current grid's right side neighbour (isfacing+1) is not NULL (has a grid address) and that it is not yet visited
             if (database.currentGrid->neighbouringGrids[WrapNSEW(database.isFacing + RIGHT)] != NULL && !database.currentGrid->neighbouringGrids[WrapNSEW(database.isFacing + RIGHT)]->visited)
             {
                 UpdateMMList(RIGHT, &database);
                 curState = FS_TURN_RIGHT;
             }
+            // check current grid's left side neighbour (isfacing-1) is not NULL (has a grid address) and that it is not yet visited
             else if (database.currentGrid->neighbouringGrids[WrapNSEW(database.isFacing + LEFT)] != NULL && !database.currentGrid->neighbouringGrids[WrapNSEW(database.isFacing + LEFT)]->visited)
             {
                 UpdateMMList(LEFT, &database);
                 curState = FS_TURN_LEFT;
             }
+            // check current grid's front neighbour is not NULL (has a grid address) and that it is not yet visited
             else if (database.currentGrid->neighbouringGrids[(database.isFacing)] != NULL && !database.currentGrid->neighbouringGrids[(database.isFacing)]->visited)
             {
                 curState = FS_GOING_STRAIGHT;
             }
             else // Cannot move forward. Left, Right and Front no possible move.
             {
+                // if able back is of current grid is null, turn 180 on the spot to perform ultrasonic check the time it enter this state
                 if (database.currentGrid->neighbouringGrids[WrapNSEW(database.isFacing + BEHIND)] == NULL)
                 {
                     curState = FS_TURN_AROUND;
                     continue;
                 }
 
+                // When neighbors are already visited, start Dijkstra to navigate Multi-Move
+                // Currently is only recursive path finding.
+
+                // look for a multi move grid to go to
                 Grid *toMoveto = NULL;
                 for (int i = 0; i < MM_MAX; i++)
                 {
@@ -244,6 +249,7 @@ int main()
                     }
                 }
 
+                // if there is no multi move grid left, maping is complete
                 if (toMoveto == NULL)
                 {
                     printf("\nMM List is empty. Completed Mapping.\n");
@@ -251,8 +257,7 @@ int main()
                     continue;
                 }
 
-                // When neighbors are already visited, start Dijkstra to navigate Multi-Move
-                // Currently is only recursive path finding.
+                // perform path finding search to the multi move grid
                 #ifdef SHORTEST_PATH
                 recurToDest(database.currentGrid, toMoveto, database.currentGrid, 0);
                 #else
@@ -267,12 +272,15 @@ int main()
         {
             printf("\n<PATHFINDING State>\n");
 
+            // counter to track the next grid to move to in path array
+            // starts from 1 because index 0 is the current grid
             static int i = 1;
-            // traverse the path array
+            
             if (database.Path[i] == NULL)
             {
                 // We have travelled at the end of the path.
-                // Move to MultiMove
+                
+                // clean up / reset data and go back to check grid state
                 RemoveFromMMList(database.Path[i - 1], &database);
                 database.isPathfinding = false;
                 memset(&database.Path, 0, sizeof(database.Path));
@@ -282,6 +290,7 @@ int main()
             }
             else
             {
+                // print path
                 printf("\nRemainding path to take: ");
                 for(int j = i; j < GRID_MAX; ++j)
                 {   
@@ -291,24 +300,21 @@ int main()
                 }
                 printf("DONE\n");
 
+                // Based on the car's current direction, find out the direction to turn to move to the next grid
                 switch (FindTurningIndex(database.Path[i++], &database))
                 {
                 case FRONT:
-                    // move forward
                     curState = FS_GOING_STRAIGHT;
                     break;
                 case RIGHT:
-                    // Turn Right
                     curState = FS_TURN_RIGHT;
                     break;
                 case LEFT:
                     curState = FS_TURN_LEFT;
                     break;
-                    // move left, then forward
                 case BEHIND:
                     curState = FS_TURN_AROUND;
                     break;
-                    // 180 back
                 }
             }
         }
@@ -322,6 +328,7 @@ int main()
             int pathFindingX = 1, pathFindingY = 1;
             unsigned char userInput = 0;
 
+            // finish maping, get x, y input for going to another grid
             printf("Enter coordinates for X: ");
             userInput = mygetchar();
             if(userInput == '-')
@@ -344,10 +351,12 @@ int main()
             printf("%c", userInput);
             pathFindingY *= (userInput - '0');
 
-            // Start Path Finding
+            // get grid based on input 
             Grid *pFinder = GetGrid(pathFindingX, pathFindingY, &database);
+            // if grid exist and is not current grid, start path fining
             if (pFinder != NULL && database.currentGrid != pFinder)
             {
+                // perform path finding search selected grid
                 #ifdef SHORTEST_PATH
                 recurToDest(database.currentGrid, pFinder, database.currentGrid, 0);
                 #else
@@ -365,14 +374,6 @@ int main()
 
         }
     }
-
-    /*
-    // Ultrasonic Sensor pulse
-    uint64_t pulseTime = sendPulse(U_TRIGGER_PIN, U_ECHO_PIN);
-    uint64_t pulseLength = (pulseTime / 2) / 29.1;
-    printf("Pulse length: %llu\n", pulseLength);
-    sleep_ms(3000);
-    */
 }
 
 void PicoStartUpTest()
@@ -388,8 +389,15 @@ void PicoStartUpTest()
     printf("SYSTEM ON, PRESS ANY KEY TO CONTINUE\n");
 }
 
+/**
+ * @brief Based on ultra sensors inputs, update the current grid and map acordingly.
+ * F, L, R are the front left and right sensor values
+ */
 void CheckPosibleMoves(int F, int L, int R, Database *database)
 {
+    // for each of the sensors value's are above a a trashold,
+    // it means that there is a posible path in that direction.
+    // link the current grid with it
     if (F > 100)
     {
         LinkCurrentGrid(FRONT, database);
@@ -404,12 +412,19 @@ void CheckPosibleMoves(int F, int L, int R, Database *database)
     }
 }
 
+/**
+ * @brief Link current grid and its neighbour together, also set other maping info such as adding to multi move array
+ * 
+ * @param facingOffset offset of the neighbouring grid based on the current facing direction.
+ * -1 for left, 0 for front, 1 for right
+ */
 void LinkCurrentGrid(int facingOffset, Database *database)
 {
     // Get current car facing direction and shift it to direction of "empty" grid
     // Modulus 4(NSEW) is to determine new direction (enum roll over).
     DIRECTION tempFacing = WrapNSEW(database->isFacing + facingOffset);
 
+    // if grid is already linked, return
     if (database->currentGrid->neighbouringGrids[tempFacing] != NULL)
     {
         return;
@@ -429,7 +444,7 @@ void LinkCurrentGrid(int facingOffset, Database *database)
         // Check if this current grid is part of the MM list.
         if (database->MMList[i] != NULL && database->MMList[i]->x == tempX && database->MMList[i]->y == tempY)
         {
-            // The grid has already been created as it is a MM grid
+            // The grid has already been linked as it is a MM grid
             // Put neighbour grid's address to current grid
             database->currentGrid->neighbouringGrids[tempFacing] = database->MMList[i];
             database->MMList[i]->neighbouringGrids[WrapNSEW(tempFacing + BEHIND)] = database->currentGrid;
@@ -452,6 +467,11 @@ void LinkCurrentGrid(int facingOffset, Database *database)
     nextGrid->y = tempY;
 }
 
+/**
+ * @brief offset x, y position based on given direction.
+ * north/south will ofset y axis
+ * east west will offset x axis
+ */
 void SetCoordinate(int *x, int *y, DIRECTION facing)
 {
     if (facing == NORTH)
@@ -472,16 +492,23 @@ void SetCoordinate(int *x, int *y, DIRECTION facing)
     }
 }
 
-Grid *GetGrid(int nextX, int nextY, Database *database)
+/**
+ * @brief get address of an existing grid by x and y coordinates.
+ */
+Grid *GetGrid(int x, int y, Database *database)
 {
     for (int i = 0; i <= database->gridCounter; ++i)
     {
-        if (nextX == database->gridList[i].x && nextY == database->gridList[i].y)
+        if (x == database->gridList[i].x && y == database->gridList[i].y)
             return &database->gridList[i];
     }
     return NULL;
 }
 
+/**
+ * @brief get address of an existing grid by x and y coordinates.
+ * If not found, return a new grid
+ */
 Grid *GetNextAvailableGrid(int nextX, int nextY, Database *database)
 {
     for (int i = 0; i <= database->gridCounter; ++i)
@@ -492,9 +519,19 @@ Grid *GetNextAvailableGrid(int nextX, int nextY, Database *database)
 
     database->gridCounter += 1;
 
+    if (database->gridCounter >= GRID_MAX)
+    {
+        printf("\n< ERROR! RAN OUT OF GRIDS >\n");
+        exit(404);
+    }
+
     return &database->gridList[database->gridCounter];
 }
 
+/**
+ * @brief based on the car's current grid and direction, find out the offset direction towards the selected grid
+ * @param grid the grid to compare with
+ */
 int FindTurningIndex(Grid *grid, Database *database)
 {
     int turningIndex = 0;
@@ -509,25 +546,36 @@ int FindTurningIndex(Grid *grid, Database *database)
         turningIndex = (NORTH - database->isFacing);
 
     if (turningIndex == 3)
-        turningIndex = -1;
+        turningIndex = LEFT;
     else if (turningIndex == -2)
-        turningIndex = 2;
+        turningIndex = BEHIND;
     else if (turningIndex == -3)
-        turningIndex = 1;
+        turningIndex = RIGHT;
 
     return turningIndex;
 }
 
+/**
+ * @brief Called before car is about to move to next grid.
+ * adds any other posible neighbour grids that has not been visited to multi move list.
+ * 
+ * @param facingOffset offset of the grid the car is turning towards based on the current facing direction.
+ * -1 for left, 0 for front, 1 for right
+ * 
+ */
 void UpdateMMList(int facingOffset, Database *database)
 {
+    // for each neighbour grid
     for (int i = 0; i < NSEW; i++)
     {
-        // if there is a grid other then right side of current
+        // if neighbour grid is not null
         if (database->currentGrid->neighbouringGrids[i] != NULL
+        // and that neighbour grid is not the grid that the car is going to travel to
         && database->currentGrid->neighbouringGrids[i] != database->currentGrid->neighbouringGrids[WrapNSEW(database->isFacing + facingOffset)]
+        // and that neighbour grid is not visited
         && !database->currentGrid->neighbouringGrids[i]->visited)
         {
-            // push this node to the MM List
+            // push this grid to the MM List
             for (int j = 0; j < MM_MAX; j++)
             {
                 if (database->MMList[j] == NULL)
@@ -540,7 +588,11 @@ void UpdateMMList(int facingOffset, Database *database)
     }
 }
 
-// Need to remove MMListing after moving to there.
+/**
+ * 
+ * @brief Removes a grid from the multi move list
+ * 
+ */
 void RemoveFromMMList(Grid *MMgrid, Database *database)
 {
     for (int i = 0; i < MM_MAX; ++i)

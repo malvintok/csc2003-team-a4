@@ -1,36 +1,21 @@
 #include <string.h>
-#include "database.h"
+#include "..\database.h"
 
 /*Func prototypes*/
-void InitAlgorithim(Database *d);
-void recurToDest(Grid *start, Grid *end, Grid *come_from, int recursiveCall);
+void recurToDest(Grid *start, Grid *end, Grid *come_from);
 bool append2Array(Grid *array[], Grid *grid);
 void popArray(Grid *array[]);
-bool isLargerthan(Grid *array1[], Grid *array2[]);
 
-/*Variables*/
-// init an array of grid struct to all NULL
-Grid *tempPath[GRID_MAX] = { NULL };
-Database *database;
-
-void InitAlgorithim(Database *d)
-{
-    database = d;
-}
 /**
  * @brief Function will takes in start grid and end grid: returns an array
- * of grid address that is the shortest path
+ * of grid address that is the first path found
  * @param start : Start grid's address
  * @param end : End grid's address
  * @param come_from: grid the prev recursive call was called from (can put as start grid address for first call)
  * @return void:
  */
-void recurToDest(Grid *start, Grid *end, Grid *come_from, int recursiveCall)
+void recurToDest(Grid *start, Grid *end, Grid *come_from)
 {
-    // init current grid as the (address of) start grid
-    //Grid *curr = start;
-    // 1st interation: init prev grid as the start address, nth interation: prev = (address of)previous current grid
-    //Grid *prev = come_from;
     // If current != (address of) end grid.
     if (start != end)
     {
@@ -44,41 +29,31 @@ void recurToDest(Grid *start, Grid *end, Grid *come_from, int recursiveCall)
              */
             if (start->neighbouringGrids[i] != NULL && start->neighbouringGrids[i] != come_from)
             {
+                // if grid has been visited before or it is the destination
                 if (start->neighbouringGrids[i]->visited == true || start->neighbouringGrids[i] == end)
                 {
-                    // append this grid to the path array
-                    if(!append2Array(tempPath, start))
+                    // append this grid to the path array, if unable to append exit from this cycle
+                    if(!append2Array(database->Path, start))
                         return;
 
                     // call recursive function with start as the new curr
-                    recurToDest(start->neighbouringGrids[i], end, start, recursiveCall+1);
+                    recurToDest(start->neighbouringGrids[i], end, start);
                     
-                    popArray(tempPath);
+                    // if path found exit recursion
+                    if(database->isPathfinding)
+                        return;
+                    else
+                        popArray(database->Path);
                 }
             }
         }
-
-        if(recursiveCall == 0){
-            if(database->Path[0] != NULL){
-                database->isPathfinding = true;
-            }
-            memset(tempPath, 0, sizeof(tempPath));
-        }
         return;
     }
-    else
+    else // if path found
     {
-    
         // append the ending grid to the path array
-        append2Array(tempPath, end);
-
-        // database->isPathfinding = true;
-        if(database->Path[0] == NULL || isLargerthan(database->Path, tempPath)){
-            memcpy(database->Path, tempPath, sizeof(tempPath));
-            
-        }
-        popArray(tempPath);
-        
+        append2Array(database->Path, end);
+        database->isPathfinding = true;
         // return to previous reurToDest function call
         return;
     }
@@ -103,6 +78,11 @@ bool append2Array(Grid *array[], Grid *grid)
     return true;
 }
 
+/**
+ * @brief Function is used to remove grid address from the top of array of grid address
+ *
+ * @param array: Array to pop from
+ */
 void popArray(Grid *array[])
 {
     int counter = 0;
@@ -114,19 +94,4 @@ void popArray(Grid *array[])
 
     array[counter-1] = NULL;
     return;
-}
-
-bool isLargerthan(Grid *array1[], Grid *array2[])
-{
-    int length1 = 0;
-    int length2 = 0;
-
-    while(array1[length1] != NULL){
-        length1++;
-    }
-    while(array2[length2] != NULL){
-        length2++;
-    }
-
-    return length1 > length2;
 }
