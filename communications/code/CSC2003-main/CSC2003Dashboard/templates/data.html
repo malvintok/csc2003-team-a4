@@ -34,12 +34,12 @@
 
       if (topic == 'pico/distancefromsensor') {
         payload  = document.getElementById('subscribe_distancefromsensor');
-        payload.innerHTML = data['payload'];
+        payload.innerHTML = data['payload'] + 'cm';
       }
 
       if (topic == 'pico/heightofhump') {
         payload  = document.getElementById('subscribe_heightofhump');
-        payload.innerHTML = data['payload'];
+        payload.innerHTML = data['payload'] + 'cm';
       }
 
       if (topic == 'pico/mapcoordinates') {
