@@ -8,7 +8,7 @@
 
 #define BARCODE_PIN 26
 #define BARCODE_THRESHOLD 1.8
-#define BARCODE_INTERVAL 10
+#define BARCODE_INTERVAL 1
 #define DICTMAXSIZE 40
 
 const float conversion_factor = 3.3f / (1<<12);
@@ -28,6 +28,17 @@ struct repeating_timer barcodeTimer;
 // combined list in alternates for dictionary search is
 //  [0,     0,      1,      0,      1,      1,      0,      0,      0] where
 //  [black, white,  black,  white,  black,  white,  black,  white,  black]
+
+//temp
+static int charState = 0;               //0 = idle, 1 = first white detected, 2 = first black detected, 3 = start scanning
+    static int blackBarOnes[10] = {0};
+    static int whiteBarZeroes[10] = {0};
+    static char binScanResult[10];
+    static int currentColor = 0;
+    static int blackCount = 0;
+    static int whiteCount = -1;
+    static char * barcodeResult = "\0";
+    static int barcodeState = 0;
 
 char* search(char* key)
 {
@@ -174,24 +185,38 @@ bool calculateSpeed(struct repeating_timer *t)  //to calculate speed using notch
     return true;
 }
 */
+
+void barcodeReset(){
+    charState = 0;
+    memset(&blackBarOnes, 0, sizeof(blackBarOnes));
+    memset(&whiteBarZeroes, 0, sizeof(whiteBarZeroes));
+    memset(&binScanResult, 0, sizeof(binScanResult));
+    currentColor = 0;
+    blackCount = 0;
+    whiteCount = -1; 
+
+    barcodeResult = "\0";
+    barcodeState = 0;
+}//0 = idle, 1 = first white detected, 2 = first black detected, 3 = start scanning
+
 bool scanBarcode(struct repeating_timer *t)
 {
-    /*Variables of Character Scanning*/
-    static int charState = 0;               //0 = idle, 1 = first white detected, 2 = first black detected, 3 = start scanning
-    static int blackBarOnes[10] = {0};
-    static int whiteBarZeroes[10] = {0};
-    static char binScanResult[10];
-    static int currentColor = 0;
-    static int blackCount = 0;
-    static int whiteCount = -1;    
+    // /*Variables of Character Scanning*/
+    // static int charState = 0;               //0 = idle, 1 = first white detected, 2 = first black detected, 3 = start scanning
+    // static int blackBarOnes[10] = {0};
+    // static int whiteBarZeroes[10] = {0};
+    // static char binScanResult[10];
+    // static int currentColor = 0;
+    // static int blackCount = 0;
+    // static int whiteCount = -1;    
 
     /*ADC variables*/
     uint16_t result = adc_read();
     float voltage = result * conversion_factor;
 
-    /*Variable of Barcode Scanning*/
-    static char * barcodeResult = "\0";
-    static int barcodeState = 0;
+    // /*Variable of Barcode Scanning*/
+    // static char * barcodeResult = "\0";
+    // static int barcodeState = 0;
     
     switch (charState){
     case 0:                                 //waiting to detect first white (starting state)
@@ -212,7 +237,7 @@ bool scanBarcode(struct repeating_timer *t)
         if (voltage > BARCODE_THRESHOLD){       //detected first black from first white
             currentColor = 1;
             charState = 2;
-            printf("Character starts!!!\n");
+            //printf("Character starts!!!\n");
         }
         else{
             currentColor = 0;       
@@ -224,9 +249,9 @@ bool scanBarcode(struct repeating_timer *t)
                 if (currentColor == 0){         //white to black is detected
                     if (blackCount == 0){       //on first detection of black to white, we want to set the thick_threshold
                         thickThreshold = ceil(blackBarOnes[0] * 1.8);
-                        printf("Thick Threshold: %d\n", thickThreshold);
+                        //printf("Thick Threshold: %d\n", thickThreshold);
                     }
-                    printf("Black %d count: %d\n", blackCount, blackBarOnes[blackCount]);
+                    //printf("Black %d count: %d\n", blackCount, blackBarOnes[blackCount]);
                     blackCount++;
                     currentColor = 1;
                 }
@@ -239,7 +264,7 @@ bool scanBarcode(struct repeating_timer *t)
                 }
                 else{
                     if (currentColor > 0){      //black to white is detected
-                        printf("White %d count: %d\n", whiteCount, whiteBarZeroes[whiteCount]);
+                        //printf("White %d count: %d\n", whiteCount, whiteBarZeroes[whiteCount]);
                         whiteCount++;
                         currentColor = 0; 
                     }
@@ -253,7 +278,7 @@ bool scanBarcode(struct repeating_timer *t)
         }
         break;
     case 3: //decode state
-        printf("Character ends\n");
+        printf("");
         int x = 0;
         int y = 0;
         for (int i = 0; i < 10; i++){   //go through the scan result for both black and white to combine it into one array
@@ -279,7 +304,7 @@ bool scanBarcode(struct repeating_timer *t)
             }                 
         }
         binScanResult[9] = '\0';
-        printf("Binary Scan Results: %s\n", binScanResult); //print what is scanned in a binary string
+        //printf("Binary Scan Results: %s\n", binScanResult); //print what is scanned in a binary string
         blackCount = 0;
         whiteCount = -1;
         charState = 0;            
@@ -288,11 +313,11 @@ bool scanBarcode(struct repeating_timer *t)
 
         //barcodeState: 0 = first character *must be asterisk, 1 = detecting the actual message, 2 = detected end of barcode
         if (barcodeResult != "err") {
-            printf("Character results: %s\n", barcodeResult);
+            //printf("Character results: %s\n", barcodeResult);
 
             switch (barcodeState){  
                 case 0:                
-                    printf("Case 0 entered\n");               
+                    //printf("Case 0 entered\n");               
                     if (barcodeResult == "*"){  //if * is detected, means we are at the start of the barcode, next character will be the acutal message
                         
                         barcodeState = 1;                    
@@ -300,7 +325,7 @@ bool scanBarcode(struct repeating_timer *t)
                     else {
                         barcodeState = 0;
                     }
-                    printf("next barcode state: %d\n", barcodeState);
+                    //printf("next barcode state: %d\n", barcodeState);
                     break;
                 
                 case 1:                         //actual message
@@ -309,20 +334,20 @@ bool scanBarcode(struct repeating_timer *t)
                     // <HERE DATABASE THE VALUE>
                     database->barcodeResult = barcodeResult;
                     barcodeState = 2;
-                    printf("Case 1 entered\n");
+                    //printf("Case 1 entered\n");
                     
-                    printf("next barcode state: %d\n", barcodeState);;              
+                    //printf("next barcode state: %d\n", barcodeState);;              
                     break;
 
                 case 2:                         //if 3 chars is detected, end of barcode
                     barcodeState = 0;
-                    printf("Case 2 entered\n");
+                    //printf("Case 2 entered\n");
 
-                    printf("next barcode state: %d\n", barcodeState);
+                    //printf("next barcode state: %d\n", barcodeState);
                     break;
 
                 default:
-                    printf("wtf barcodeState is more than 1?\n");
+                    //printf("wtf barcodeState is more than 1?\n");
                     break;
             }
         }
@@ -330,8 +355,8 @@ bool scanBarcode(struct repeating_timer *t)
         else {
             //reset list     
             barcodeResult = "err";       
-            printf("Error in scanning barcode\n");
-            printf("Car needs to reverse...\n");
+            //printf("Error in scanning barcode\n");
+            //printf("Car needs to reverse...\n");
         }
         break;
     default:

@@ -12,7 +12,6 @@
 #endif
 
 #include "database.h"
-
 #include "motor.c"
 #include "ultrasonic.c"
 #include "barcodencoder.c"
@@ -92,7 +91,7 @@ int main()
     // mygetchar();
 
     // Main loop, will keep running
-    while (1)
+    while(1)
     {
         // Final State Machine (FSM)
         switch (curState)
@@ -103,10 +102,8 @@ int main()
         {
             printf("\n<GOING_STRAIGHT State>\n");
 
-            while (motor_actionCode)
-            {
-                motors_calculatePID();
-            }
+            while (motor_actionCode){}
+            sleep_ms(3000);
 
             // update current grid to next grid based on the direction of car
             database->currentGrid = database->currentGrid->neighbouringGrids[database->isFacing];
@@ -121,7 +118,8 @@ int main()
             printf("\n<TURN_LEFT State>\n");
             database->isFacing = WrapNSEW(database->isFacing + LEFT);
 
-            sleep_ms(5000);
+            while (motor_actionCode){}
+            sleep_ms(3000);
 
             motors_moveByNotch(GRID_NOTCH);
             curState = FS_GOING_STRAIGHT;
@@ -133,7 +131,8 @@ int main()
             printf("\n<TURN_RIGHT State>\n");
             database->isFacing = WrapNSEW(database->isFacing + RIGHT);
 
-            sleep_ms(5000);
+            while (motor_actionCode){}
+            sleep_ms(3000);
 
             motors_moveByNotch(GRID_NOTCH);
             curState = FS_GOING_STRAIGHT;
@@ -144,8 +143,9 @@ int main()
         {
             printf("\n<TURN_AROUND State>\n");
             database->isFacing = WrapNSEW(database->isFacing + BEHIND);
-
-            sleep_ms(5000);
+            
+            while (motor_actionCode){}
+            sleep_ms(3000);
 
             if (database->isPathfinding == true)
             {
@@ -178,32 +178,21 @@ int main()
 
             // Get all 3 Ultrasonic's Current Distance (L,R,F)
             float uInputF = .0, uInputL = .0, uInputR = .0;
-
-            uInputF = getDist(RIGHT_TRIG, RIGHT_ECHO);
-            uInputL = getDist(CENTER_TRIG, CENTER_ECHO);
-            uInputR = getDist(LEFT_TRIG, LEFT_ECHO);
+            
+            database->ultraDist = uInputF = getDist(CENTER_TRIG, CENTER_ECHO);
+            uInputL = getDist(LEFT_TRIG, LEFT_ECHO);
+            uInputR = getDist(RIGHT_TRIG, RIGHT_ECHO);
 
             printf("Front Sonic: %.3f\n", uInputF);
             printf("Left Sonic: %.3f\n", uInputL);
             printf("Right Sonic: %.3f\n", uInputR);
 
             //send ultrasonic distance to comms
-            sendDist(uInputF);
+            // sendDist(uInputF);
 
             // based on ultrasonic input, update the current grid's details and other maping infomation
             CheckPosibleMoves(uInputF, uInputL, uInputR);
-
             
-            //send grid data to comms
-            if (!finishMapping)
-            {
-                static int q = 0;
-                sendCoord(++q, database->currentGrid->y,
-                          database->currentGrid->neighbouringGrids[0] == NULL ? 0 : 1,
-                          database->currentGrid->neighbouringGrids[1] == NULL ? 0 : 1,
-                          database->currentGrid->neighbouringGrids[2] == NULL ? 0 : 1,
-                          database->currentGrid->neighbouringGrids[3] == NULL ? 0 : 1);
-            }
 
             // after updating data above
             // check which direction is possible. Check Right, Left then Front.
@@ -211,20 +200,21 @@ int main()
             if (database->currentGrid->neighbouringGrids[WrapNSEW(database->isFacing + RIGHT)] != NULL && !database->currentGrid->neighbouringGrids[WrapNSEW(database->isFacing + RIGHT)]->visited)
             {
                 UpdateMMList(RIGHT);
-                motors_turnMotors(0, 90);
+		        motors_turnMotorsNew(0,90);
                 curState = FS_TURN_RIGHT;
             }
             // check current grid's left side neighbour (isfacing-1) is not NULL (has a grid address) and that it is not yet visited
             else if (database->currentGrid->neighbouringGrids[WrapNSEW(database->isFacing + LEFT)] != NULL && !database->currentGrid->neighbouringGrids[WrapNSEW(database->isFacing + LEFT)]->visited)
             {
                 UpdateMMList(LEFT);
-                motors_turnMotors(1, 90);
+		        motors_turnMotorsNew(1,90);
                 curState = FS_TURN_LEFT;
             }
             // check current grid's front neighbour is not NULL (has a grid address) and that it is not yet visited
             else if (database->currentGrid->neighbouringGrids[(database->isFacing)] != NULL && !database->currentGrid->neighbouringGrids[(database->isFacing)]->visited)
             {
                 motors_moveByNotch(GRID_NOTCH);
+                barcodeReset();
                 curState = FS_GOING_STRAIGHT;
             }
             else // Cannot move forward. Left, Right and Front no possible move.
@@ -232,7 +222,7 @@ int main()
                 // if able back is of current grid is null, turn 180 on the spot to perform ultrasonic check the time it enter this state
                 if (database->currentGrid->neighbouringGrids[WrapNSEW(database->isFacing + BEHIND)] == NULL)
                 {
-                    motors_turnMotors(0, 180);
+		            motors_turnMotorsNew(0,180);
                     curState = FS_TURN_AROUND;
                     continue;
                 }
@@ -309,16 +299,15 @@ int main()
                     curState = FS_GOING_STRAIGHT;
                     break;
                 case RIGHT:
-                    
-                    motors_turnMotors(0, 90);
+		            motors_turnMotorsNew(0,90);
                     curState = FS_TURN_RIGHT;
                     break;
                 case LEFT:
-                    motors_turnMotors(1, 90);
+		            motors_turnMotorsNew(1,90);
                     curState = FS_TURN_LEFT;
                     break;
                 case BEHIND:
-                    motors_turnMotors(0, 180);
+                    motors_turnMotorsNew(0, 180);
                     curState = FS_TURN_AROUND;
                     break;
                 }
@@ -357,7 +346,7 @@ int main()
             printf("%c", userInput);
             pathFindingY *= (userInput - '0');
             
-            /*
+            
             // Start Path Finding
             // get grid based on input 
             // if grid exist and is not current grid, start path fining
@@ -376,15 +365,9 @@ int main()
             else
             {
                 printf("\nCannot move to location\n");
-            }*/
+            }
         }
         break;
-        }
-
-        if(database->barcodeResult != NULL)
-        {
-            sendBarcode(database->barcodeResult);
-            database->barcodeResult = NULL;
         }
     }
 }
@@ -620,16 +603,30 @@ void RemoveFromMMList(Grid *MMgrid)
  */
 bool UpdateComms(struct repeating_timer *t)
 {
+    
+    sendDist(database->ultraDist);
+
     sendWheelSpeedL(database->wheelSpeedL);
 
     sendWheelSpeedR(database->wheelSpeedR);
 
+    if (database->barcodeResult != NULL)
+    {
+        sendBarcode(database->barcodeResult);
+        sendBarcodeCoord(database->currentGrid->x, database->currentGrid->y);
+        database->barcodeResult = NULL;
+    }
+
     // sendDist(distancefromsensor2);
 
-    sendHeight(0);
+    // sendHeight(0);
 
-    // sendCoord(x,y,1,0,0,0);
+    // sendHumpCoord(0, 0);
 
-    sendHumpCoord(0, 0);
-    sendBarcodeCoord(0, 0);
+    sendCoord(database->currentGrid->x, database->currentGrid->y,
+              database->currentGrid->neighbouringGrids[0] == NULL ? 0 : 1,
+              database->currentGrid->neighbouringGrids[1] == NULL ? 0 : 1,
+              database->currentGrid->neighbouringGrids[2] == NULL ? 0 : 1,
+              database->currentGrid->neighbouringGrids[3] == NULL ? 0 : 1);
+            
 }

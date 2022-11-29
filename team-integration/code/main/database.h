@@ -1,6 +1,7 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,12 +9,10 @@
 #include "pico/stdlib.h"
 
 #include "hardware/adc.h"
+#include "hardware/pwm.h"
 #include "hardware/gpio.h"
 #include "hardware/uart.h"
 #include "hardware/timer.h"
-
-
-#include "string.h"
 
 // Ultrasonic pins
 #define LEFT_TRIG 10 
@@ -40,9 +39,9 @@
 #define RIGHT    1
 #define BEHIND   2
 
-#define UPDATE_COMMS_INTERVAL 500
+#define UPDATE_COMMS_INTERVAL 1000
 
-#define GRID_NOTCH 20
+#define GRID_NOTCH 28
 
 // Enum to keep track of the direction
 typedef enum DIRECTION
@@ -105,7 +104,8 @@ typedef struct
 
     int wheelSpeedL;
     int wheelSpeedR;
-
+    
+    int ultraDist;
 } Database;
 
 // variables
