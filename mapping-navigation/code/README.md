@@ -6,6 +6,8 @@
 - LAU HUI QI (2102823)
 - LAU JUN XIANG (2100582)
 
+# Component that it was ran on:
+1. Raspberry Pico
 
 # How it works (Grid mapping algorithim)
 1. Mapping algorithim will get input from ultrasonic sensors on the left,

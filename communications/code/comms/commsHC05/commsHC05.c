@@ -22,7 +22,7 @@ int main(void) {
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
 
-    char * testData = "1111111111";
+    char * testData = "1234567891";
 
     double executionTime = 0;
     double counter = 0;
@@ -31,15 +31,14 @@ int main(void) {
     // sending data over to HC05 using uart
     while (true) { 
         uart_puts(UART_ID, &testData);
-        printf(testData);
-        printf("\n");
 
         counter++;
-        if (counter == 1000) { //10000 characters
+        if (counter == 100000) { //sending 1000000 characters
             clock_t endTime = clock();
             executionTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
             // calculating time taken to send 100000 characters
             printf("Execution time:%f sec\n", executionTime);
+            // printf("Sent 100000 characters.");
             break;
         }
     }
